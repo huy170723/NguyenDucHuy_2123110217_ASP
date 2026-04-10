@@ -12,7 +12,7 @@ using NguyenDucHuy_2123110217_ASP.Data;
 namespace NguyenDucHuy_2123110217_ASP.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260403040821_InitialCreate")]
+    [Migration("20260417012816_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />

@@ -1,0 +1,162 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YaMe.vn - Clone Style</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #fff;
+            color: #333;
+        }
+        /* Navbar style YaMe */
+        .navbar {
+            background-color: #000 !important;
+            padding: 15px 0;
+        }
+
+        .navbar-brand, .nav-link {
+            color: #fff !important;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        /* Banner */
+        .hero-banner {
+            background: url('https://images.unsplash.com/photo-1441984908746-d47b8b247cb8?q=80&w=2070') center/cover;
+            height: 450px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-shadow: 2px 2px 10px rgba(0,0,0,0.5);
+            margin-bottom: 40px;
+        }
+
+        /* Product Card Style */
+        .product-card {
+            border: none;
+            transition: transform 0.3s;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+            .product-card:hover {
+                transform: translateY(-5px);
+            }
+
+        .product-img {
+            background-color: #f5f5f5;
+            height: 350px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+            .product-img img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+
+        .product-name {
+            font-size: 14px;
+            font-weight: 500;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .product-price {
+            color: #f00;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .section-title {
+            text-align: center;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 40px;
+            border-bottom: 2px solid #000;
+            display: inline-block;
+            padding-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="#">YAME CLONE</a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-link">BỘ SƯU TẬP</li>
+                    <li class="nav-link">NAM</li>
+                    <li class="nav-link">NỮ</li>
+                    <li class="nav-link">PHỤ KIỆN</li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="hero-banner">
+        <h1 class="display-3 fw-bold">BST MỚI NHẤT 2026</h1>
+    </div>
+
+    <div class="container text-center">
+        <h2 class="section-title">SẢN PHẨM NỔI BẬT</h2>
+
+        <div class="row" id="product-grid">
+            <div class="col-12 text-muted">Đang tải sản phẩm từ hệ thống...</div>
+        </div>
+    </div>
+
+    <footer class="bg-dark text-white text-center py-4 mt-5">
+        <p>&copy; 2026 Nguyen Duc Huy - Clothing Management System</p>
+    </footer>
+
+    <script>
+    // 1. ĐỊA CHỈ API CỦA BẠN (Thay đổi port 7053 cho đúng port dự án ASP của bạn)
+    const API_URL = "https://localhost:7053/api/Product";
+
+    async function loadProducts() {
+        try {
+            const response = await fetch(API_URL);
+            const products = await response.json();
+
+            const grid = document.getElementById('product-grid');
+            grid.innerHTML = ""; // Xóa nội dung chờ
+
+            products.forEach(p => {
+                // Tạo giao diện cho từng sản phẩm
+                const html = `
+                    <div class="col-6 col-md-4 col-lg-3">
+                        <div class="product-card">
+                            <div class="product-img">
+                                <img src="${p.imageUrl || 'https://via.placeholder.com/350x450?text=Yame+Clothing'}" alt="${p.name}">
+                            </div>
+                            <div class="product-name">${p.name}</div>
+                            <div class="product-price">${p.price.toLocaleString('vi-VN')} VNĐ</div>
+                        </div>
+                    </div>
+                `;
+                grid.innerHTML += html;
+            });
+        } catch (error) {
+            console.error("Lỗi:", error);
+            document.getElementById('product-grid').innerHTML = "<p class='text-danger'>Không thể kết nối với Database. Hãy kiểm tra Backend!</p>";
+        }
+    }
+
+    // Tự động chạy khi mở web
+    window.onload = loadProducts;
+    </script>
+
+</body>
+</html>

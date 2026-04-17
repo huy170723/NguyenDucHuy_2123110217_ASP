@@ -1,11 +1,11 @@
 ﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>YaMe.vn - Clone Style</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&amp;display=swap" rel="stylesheet" />
     <style>
         body {
             font-family: 'Roboto', sans-serif;
@@ -26,7 +26,7 @@
 
         /* Banner */
         .hero-banner {
-            background: url('https://images.unsplash.com/photo-1441984908746-d47b8b247cb8?q=80&w=2070') center/cover;
+            background: url('https://images.unsplash.com/photo-1441984908746-d47b8b247cb8?q=80&amp;w=2070') center/cover;
             height: 450px;
             display: flex;
             align-items: center;
@@ -93,13 +93,29 @@
 
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
         <div class="container">
-            <a class="navbar-brand" href="#">YAME CLONE</a>
+            <a class="navbar-brand" href="#">YAME</a>
             <div class="collapse navbar-collapse">
-                <ul class="navbar-nav ms-auto">
+                <ul class="navbar-nav ms-auto align-items-center">
                     <li class="nav-link">BỘ SƯU TẬP</li>
                     <li class="nav-link">NAM</li>
                     <li class="nav-link">NỮ</li>
                     <li class="nav-link">PHỤ KIỆN</li>
+                    <li class="nav-item">
+                        <button id="btnCart" class="btn btn-outline-light btn-sm ms-3">Giỏ hàng (<span id="cartCount">0</span>)</button>
+                    </li>
+                    <li class="nav-item ms-2">
+                        <a href="/Home/Categories" class="btn btn-outline-light btn-sm">Danh mục</a>
+                    </li>
+                    <li class="nav-item ms-2">
+                        <a href="/Profile" id="btnProfileLink" class="btn btn-outline-light btn-sm">Hồ sơ</a>
+                    </li>
+                    <li class="nav-item">
+                        <button id="btnLogin" class="btn btn-light btn-sm ms-2">Đăng nhập</button>
+                    </li>
+                    <li class="nav-item d-none" id="accountArea">
+                        <span class="text-white ms-3" id="accountName"></span>
+                        <button id="btnLogout" class="btn btn-outline-light btn-sm ms-2">Đăng xuất</button>
+                    </li>
                 </ul>
             </div>
         </div>
@@ -112,50 +128,480 @@
     <div class="container text-center">
         <h2 class="section-title">SẢN PHẨM NỔI BẬT</h2>
 
+        <div class="row mb-3">
+            <div class="col-md-4 text-start">
+                <select id="selCategory" class="form-select form-select-sm">
+                    <option value="0">-- Tất cả danh mục --</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <div class="input-group input-group-sm">
+                    <input id="inputSearch" type="text" class="form-control" placeholder="Tìm theo tên sản phẩm..." />
+                    <button id="btnSearch" class="btn btn-dark">Tìm</button>
+                </div>
+            </div>
+            <div class="col-md-2 text-end">
+                <button id="btnClear" class="btn btn-outline-secondary btn-sm">Xóa lọc</button>
+            </div>
+        </div>
+
         <div class="row" id="product-grid">
             <div class="col-12 text-muted">Đang tải sản phẩm từ hệ thống...</div>
         </div>
+
     </div>
 
     <footer class="bg-dark text-white text-center py-4 mt-5">
-        <p>&copy; 2026 Nguyen Duc Huy - Clothing Management System</p>
+        <p>&#169; 2026 Nguyen Duc Huy - Clothing Management System</p>
     </footer>
 
+    <!-- Modal simple -->
+    <div id="appModal" style="display:none; position:fixed; left:0; top:0; right:0; bottom:0; background:rgba(0,0,0,0.6); z-index:2000;">
+        <div id="modalContent" style="max-width:900px; margin:60px auto; background:#fff; border-radius:6px; overflow:hidden;">
+            <div style="padding:12px 16px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+                <strong id="modalTitle"></strong>
+                <button onclick="closeModal()" class="btn btn-sm btn-light">Đóng</button>
+            </div>
+            <div id="modalBody" style="max-height:70vh; overflow:auto;"></div>
+        </div>
+    </div>
+
     <script>
-    // 1. ĐỊA CHỈ API CỦA BẠN (Thay đổi port 7053 cho đúng port dự án ASP của bạn)
-    const API_URL = "https://localhost:7053/api/Product";
+    /*<![CDATA[*/
+    const API = {
+        products: '/api/Product',
+        categories: '/api/Category',
+        users: '/api/User',
+        customers: '/api/Customer',
+        orders: '/api/Order',
+        payments: '/api/Payment'
+    };
 
-    async function loadProducts() {
-        try {
-            const response = await fetch(API_URL);
-            const products = await response.json();
+    // --- Helpers: cart stored in localStorage ---
+    function getCart() {
+        return JSON.parse(localStorage.getItem('cart') || '[]');
 
-            const grid = document.getElementById('product-grid');
-            grid.innerHTML = ""; // Xóa nội dung chờ
+    }
 
-            products.forEach(p => {
-                // Tạo giao diện cho từng sản phẩm
-                const html = `
-                    <div class="col-6 col-md-4 col-lg-3">
-                        <div class="product-card">
-                            <div class="product-img">
-                                <img src="${p.imageUrl || 'https://via.placeholder.com/350x450?text=Yame+Clothing'}" alt="${p.name}">
-                            </div>
-                            <div class="product-name">${p.name}</div>
-                            <div class="product-price">${p.price.toLocaleString('vi-VN')} VNĐ</div>
-                        </div>
-                    </div>
-                `;
-                grid.innerHTML += html;
+    // --- Load categories into dropdown ---
+    async function loadCategories(){
+        try{
+            const res = await fetch(API.categories);
+            if (!res.ok) throw new Error('Cannot load categories');
+            const cats = await res.json();
+            const sel = document.getElementById('selCategory');
+            // clear existing options except first
+            sel.innerHTML = '<option value="0">-- Tất cả danh mục --</option>';
+            cats.forEach(c=>{
+                const opt = document.createElement('option');
+                opt.value = c.categoryId;
+                opt.text = c.name;
+                sel.appendChild(opt);
             });
-        } catch (error) {
-            console.error("Lỗi:", error);
-            document.getElementById('product-grid').innerHTML = "<p class='text-danger'>Không thể kết nối với Database. Hãy kiểm tra Backend!</p>";
+        }catch(e){ console.error(e); }
+    }
+
+    function escapeHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    function saveCart(cart) {
+        localStorage.setItem('cart', JSON.stringify(cart));
+        renderCartCount();
+    }
+
+    function renderCartCount() {
+        const cart = getCart();
+        const count = cart.reduce((s, i) => s + i.quantity, 0);
+        document.getElementById('cartCount').innerText = count;
+    }
+
+    // --- Auth (simple) ---
+    function getCurrentUser() {
+        return JSON.parse(localStorage.getItem('user') || 'null');
+    }
+
+    function setCurrentUser(u) {
+        if (u) localStorage.setItem('user', JSON.stringify(u)); else localStorage.removeItem('user');
+        updateAuthUI();
+    }
+
+    function updateAuthUI() {
+        const user = getCurrentUser();
+        if (user) {
+            document.getElementById('accountArea').classList.remove('d-none');
+            document.getElementById('btnLogin').classList.add('d-none');
+            document.getElementById('accountName').innerText = user.name || user.username;
+        } else {
+            document.getElementById('accountArea').classList.add('d-none');
+            document.getElementById('btnLogin').classList.remove('d-none');
         }
     }
 
-    // Tự động chạy khi mở web
-    window.onload = loadProducts;
+    // --- Load products and render grid ---
+    async function loadProducts() {
+        try {
+            // if a category filter is selected, call category endpoint
+            const selCat = Number(document.getElementById('selCategory').value || 0);
+            const q = (document.getElementById('inputSearch').value || '').trim();
+            let products = [];
+
+            if (q) {
+                const res = await fetch(API.products + '/search?q=' + encodeURIComponent(q));
+                if (!res.ok) throw new Error('Server returned ' + res.status);
+                products = await res.json();
+                // if category also selected, filter client-side
+                if (selCat > 0) products = products.filter(p => p.categoryId == selCat);
+            } else if (selCat > 0) {
+                const res = await fetch(API.products + '/category/' + selCat);
+                if (!res.ok) throw new Error('Server returned ' + res.status);
+                products = await res.json();
+            } else {
+                const res = await fetch(API.products);
+                if (!res.ok) throw new Error('Server returned ' + res.status);
+                products = await res.json();
+            }
+
+            const grid = document.getElementById('product-grid');
+            grid.innerHTML = '';
+
+            products.forEach(p => {
+                const price = (p.productVariants && p.productVariants.length>0) ? p.productVariants[0].price : p.price;
+                const img = p.imageUrl || 'https://via.placeholder.com/350x450?text=Yame+Clothing';
+                const html = `
+                    <div class="col-6 col-md-4 col-lg-3">
+                        <div class="product-card card p-2">
+                            <div class="product-img mb-2">
+                                <img src="${img}" alt="${escapeHtml(p.name)}" />
+                            </div>
+                            <div class="product-name">${escapeHtml(p.name)}</div>
+                            <div class="product-price">${Number(price).toLocaleString('vi-VN')} VNĐ</div>
+                            <div class="mt-2">
+                                <button class="btn btn-sm btn-primary" onclick="viewProduct(${p.productId})">Xem</button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="quickAdd(${p.productId})">Thêm nhanh</button>
+                            </div>
+                        </div>
+                    </div>`;
+                grid.innerHTML += html;
+            });
+        } catch (err) {
+            console.error(err);
+            document.getElementById('product-grid').innerHTML = "<p class='text-danger'>Không thể kết nối với Backend. Kiểm tra server hoặc console.</p>";
+        }
+
+    // --- Load categories into dropdown ---
+    async function loadCategories(){
+        try{
+            const res = await fetch(API.categories);
+            if (!res.ok) throw new Error('Cannot load categories');
+            const cats = await res.json();
+            const sel = document.getElementById('selCategory');
+            // clear existing options except first
+            sel.innerHTML = '<option value="0">-- Tất cả danh mục --</option>';
+            cats.forEach(c=>{
+                const opt = document.createElement('option');
+                opt.value = c.categoryId;
+                opt.text = c.name;
+                sel.appendChild(opt);
+            });
+        }catch(e){ console.error(e); }
+    }
+    }
+
+    function escapeHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    // --- Product detail & add to cart ---
+    window.viewProduct = async function(id) {
+        try {
+            const res = await fetch(API.products + '/' + id);
+            if (!res.ok) throw new Error('Không lấy được sản phẩm');
+            const p = await res.json();
+            const img = p.imageUrl || 'https://via.placeholder.com/450x600';
+            const variants = p.productVariants || [];
+            let variantsHtml = '';
+            variants.forEach(v => {
+                variantsHtml += `<option value="${v.variantId}" data-price="${v.price}">${v.size} / ${v.color} - ${Number(v.price).toLocaleString('vi-VN')} VNĐ</option>`;
+            });
+            if (!variantsHtml) variantsHtml = `<option value="-1" data-price="${p.price}">Mặc định - ${Number(p.price).toLocaleString('vi-VN')} VNĐ</option>`;
+
+            const detailHtml = `
+                <div class="row">
+                    <div class="col-md-5"><img src="${img}" class="img-fluid" /></div>
+                    <div class="col-md-7">
+                        <h4>${escapeHtml(p.name)}</h4>
+                        <p>${escapeHtml(p.description||'')}</p>
+                        <div class="mb-2"><strong>Giá:</strong> <span id="detailPrice">${Number(variants.length?variants[0].price:p.price).toLocaleString('vi-VN')} VNĐ</span></div>
+                        <div class="mb-2">
+                            <label>Biến thể</label>
+                            <select id="selVariant" class="form-select form-select-sm">${variantsHtml}</select>
+                        </div>
+                        <div class="mb-2">
+                            <label>Số lượng</label>
+                            <input id="inputQty" type="number" class="form-control form-control-sm" value="1" min="1" />
+                        </div>
+                        <div>
+                            <button class="btn btn-success" id="btnAddCartDetail">Thêm vào giỏ</button>
+                        </div>
+                    </div>
+                </div>`;
+
+            // show modal-like area
+            showModal('Chi tiết sản phẩm', detailHtml);
+
+            const sel = document.getElementById('selVariant');
+            sel.addEventListener('change', ()=>{
+                const price = sel.options[sel.selectedIndex].dataset.price;
+                document.getElementById('detailPrice').innerText = Number(price).toLocaleString('vi-VN') + ' VNĐ';
+            });
+
+            document.getElementById('btnAddCartDetail').onclick = ()=>{
+                const variantId = Number(sel.value);
+                const qty = Number(document.getElementById('inputQty').value)||1;
+                // if variantId == -1 use productId and price
+                addToCart(variantId>0?variantId:('p'+p.productId), qty, (variantId>0?null:p.price));
+                closeModal();
+            };
+
+        } catch (err) { console.error(err); alert('Lấy sản phẩm thất bại'); }
+    };
+
+    // quick add: take first variant or product default
+    window.quickAdd = async function(productId){
+        try{
+            const res = await fetch(API.products + '/' + productId);
+            if (!res.ok) throw new Error('err');
+            const p = await res.json();
+            const variants = p.productVariants || [];
+            if (variants.length) addToCart(variants[0].variantId,1);
+            else addToCart('p'+p.productId,1,p.price);
+        }catch(e){console.error(e)}
+    }
+
+    function addToCart(variantId, quantity, priceOverride){
+        const cart = getCart();
+        const key = String(variantId);
+        const existing = cart.find(i => i.variantId==key);
+        if (existing) existing.quantity += quantity; else cart.push({ variantId: key, quantity, price: priceOverride||null });
+        saveCart(cart);
+        renderCart();
+    }
+
+    // --- Cart UI ---
+    function renderCart(){
+        const cart = getCart();
+        let html = '';
+        if (!cart.length) html = '<div class="p-3">Giỏ hàng trống</div>';
+        else{
+            html = '<div class="p-3">';
+            html += '<table class="table table-sm"><thead><tr><th>SP</th><th>SL</th><th>Giá</th><th></th></tr></thead><tbody>';
+            // need to fetch product names for variants
+            const promises = cart.map(async item => {
+                if (item.variantId.startsWith('p')){
+                    const pid = Number(item.variantId.substring(1));
+                    const res = await fetch(API.products + '/' + pid);
+                    const p = await res.json();
+                    return { title: p.name, price: item.price || p.price, qty: item.quantity, key: item.variantId };
+                } else {
+                    // find variant info from server: no dedicated endpoint, fetch product list to find it
+                    const res = await fetch(API.products);
+                    const products = await res.json();
+                    for (const prod of products){
+                        const v = (prod.productVariants||[]).find(x=>String(x.variantId)==String(item.variantId));
+                        if (v) return { title: prod.name + ' - ' + v.sku, price: v.price, qty: item.quantity, key: item.variantId };
+                    }
+                    return { title: 'Unknown', price: 0, qty: item.quantity, key: item.variantId };
+                }
+            });
+            Promise.all(promises).then(rows=>{
+                let total = 0;
+                rows.forEach(r=>{
+                    html += `<tr><td>${escapeHtml(r.title)}</td><td>${r.qty}</td><td>${Number(r.price).toLocaleString('vi-VN')}</td><td><button class="btn btn-sm btn-danger" onclick="removeFromCart('${r.key}')">X</button></td></tr>`;
+                    total += r.price * r.qty;
+                });
+                html += `</tbody></table><div class="px-3 pb-3">Tổng: <strong>${Number(total).toLocaleString('vi-VN')} VNĐ</strong></div>`;
+                html += `<div class="px-3 pb-3"><button class="btn btn-primary" onclick="proceedCheckout()">Thanh toán</button></div></div>`;
+                document.getElementById('modalBody').innerHTML = html;
+            }).catch(e=>{ console.error(e); document.getElementById('modalBody').innerHTML = '<div class="p-3 text-danger">Lỗi khi tải giỏ hàng</div>'; });
+            return;
+        }
+        document.getElementById('modalBody').innerHTML = html;
+    }
+
+    window.removeFromCart = function(key){
+        const cart = getCart().filter(i=>i.variantId!==key);
+        saveCart(cart);
+        renderCart();
+    }
+
+    // --- Checkout ---
+    window.proceedCheckout = function(){
+        const user = getCurrentUser();
+        if (!user) { alert('Vui lòng đăng nhập trước khi thanh toán'); closeModal(); showLogin(); return; }
+        // show customer form
+        const html = `
+            <div class="p-3">
+                <h5>Thông tin nhận hàng</h5>
+                <div class="mb-2"><input id="custName" class="form-control form-control-sm" placeholder="Họ tên"/></div>
+                <div class="mb-2"><input id="custPhone" class="form-control form-control-sm" placeholder="Số điện thoại"/></div>
+                <div><button class="btn btn-success" onclick="submitOrder()">Xác nhận và đặt hàng</button></div>
+            </div>`;
+        document.getElementById('modalTitle').innerText = 'Thanh toán';
+        document.getElementById('modalBody').innerHTML = html;
+    }
+
+    window.submitOrder = async function(){
+        const name = document.getElementById('custName').value.trim();
+        const phone = document.getElementById('custPhone').value.trim();
+        if (!name || !phone) { alert('Nhập tên và số điện thoại'); return; }
+        try{
+            // create customer
+            const csRes = await fetch(API.customers, { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name, phone })});
+            if (!csRes.ok) { const t = await csRes.text(); throw new Error(t||'Không tạo được khách hàng'); }
+            const customer = await csRes.json();
+            // build order
+            const cart = getCart();
+            if (!cart.length) { alert('Giỏ hàng trống'); return; }
+            // prepare order items: need VariantId numeric; for product default we used key 'p{id}' - cannot order variantless in this model; attempt to pick first variant of product
+            const products = await (await fetch(API.products)).json();
+            const items = [];
+            for (const it of cart){
+                if (it.variantId.startsWith('p')){
+                    const pid = Number(it.variantId.substring(1));
+                    const prod = products.find(x=>x.productId==pid);
+                    if (!prod) throw new Error('Sản phẩm không tồn tại');
+                    const variant = (prod.productVariants||[])[0];
+                    if (!variant) throw new Error('Sản phẩm chưa có biến thể');
+                    items.push({ variantId: variant.variantId, quantity: it.quantity, price: variant.price });
+                } else {
+                    const vid = Number(it.variantId);
+                    // find variant
+                    let found=null;
+                    for (const prod of products){ const v=(prod.productVariants||[]).find(x=>x.variantId==vid); if (v){ found=v; break; } }
+                    if (!found) throw new Error('Variant not found');
+                    items.push({ variantId: vid, quantity: it.quantity, price: found.price });
+                }
+            }
+
+            const user = getCurrentUser();
+            const orderPayload = {
+                customerId: customer.customerId,
+                userId: user.userId,
+                orderItems: items
+            };
+
+            const ordRes = await fetch(API.orders, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(orderPayload) });
+            if (!ordRes.ok) { const t = await ordRes.text(); throw new Error(t||'Đặt hàng thất bại'); }
+            const order = await ordRes.json();
+            // clear cart
+            saveCart([]);
+            closeModal();
+            alert('Đặt hàng thành công. OrderId: ' + order.orderId);
+        }catch(e){ console.error(e); alert('Lỗi: ' + (e.message||e)); }
+    }
+
+    // --- Modal helpers ---
+    function showModal(title, bodyHtml){
+        const modal = document.getElementById('appModal');
+        document.getElementById('modalTitle').innerText = title;
+        document.getElementById('modalBody').innerHTML = bodyHtml;
+        modal.style.display = 'block';
+    }
+    function closeModal(){ document.getElementById('appModal').style.display = 'none'; }
+
+    // --- Login/Register UI ---
+    function showLogin(){
+        const html = `
+            <div class="p-3">
+                <h5>Đăng nhập</h5>
+                <div class="mb-2"><input id="loginUser" class="form-control form-control-sm" placeholder="Username"/></div>
+                <div class="mb-2"><input id="loginPass" type="password" class="form-control form-control-sm" placeholder="Password"/></div>
+                <div><button class="btn btn-primary" onclick="doLogin()">Đăng nhập</button>
+                <button class="btn btn-link" onclick="showRegister()">Đăng ký</button></div>
+            </div>`;
+        showModal('Đăng nhập', html);
+    }
+
+    function showRegister(){
+        const html = `
+            <div class="p-3">
+                <h5>Đăng ký</h5>
+                <div class="mb-2"><input id="regName" class="form-control form-control-sm" placeholder="Họ tên"/></div>
+                <div class="mb-2"><input id="regUser" class="form-control form-control-sm" placeholder="Username"/></div>
+                <div class="mb-2"><input id="regPass" type="password" class="form-control form-control-sm" placeholder="Password"/></div>
+                <div class="mb-2"><input id="regEmail" class="form-control form-control-sm" placeholder="Email"/></div>
+                <div><button class="btn btn-success" onclick="doRegister()">Đăng ký</button></div>
+            </div>`;
+        showModal('Đăng ký', html);
+    }
+
+    window.doLogin = async function(){
+        const username = document.getElementById('loginUser').value.trim();
+        const password = document.getElementById('loginPass').value;
+        if (!username||!password) { alert('Nhập username và password'); return; }
+        try{
+            const res = await fetch(API.users + '/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username, password }) });
+            if (!res.ok) { const t = await res.text(); throw new Error(t||'Login failed'); }
+            const data = await res.json();
+            setCurrentUser({ userId: data.userId, username: data.username, name: data.name });
+            closeModal();
+            alert('Đăng nhập thành công');
+        }catch(e){ console.error(e); alert('Đăng nhập thất bại'); }
+    }
+
+    window.doRegister = async function(){
+        const name = document.getElementById('regName').value.trim();
+        const username = document.getElementById('regUser').value.trim();
+        const password = document.getElementById('regPass').value;
+        const email = document.getElementById('regEmail').value.trim();
+        if (!username||!password||!email) { alert('Nhập đủ thông tin'); return; }
+        try{
+            const res = await fetch(API.users, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name, username, password, email }) });
+            if (!res.ok) { const t = await res.text(); throw new Error(t||'Register failed'); }
+            const user = await res.json();
+            setCurrentUser({ userId: user.userId, username: user.username, name: user.name });
+            closeModal();
+            alert('Đăng ký thành công');
+        }catch(e){ console.error(e); alert('Đăng ký thất bại'); }
+    }
+
+    // --- Init ---
+    document.getElementById('btnCart').addEventListener('click', ()=>{ document.getElementById('modalTitle').innerText='Giỏ hàng'; renderCart(); document.getElementById('appModal').style.display='block'; });
+    document.getElementById('btnLogin').addEventListener('click', ()=> showLogin());
+    document.getElementById('btnLogout').addEventListener('click', ()=>{ setCurrentUser(null); alert('Đã đăng xuất'); });
+    document.getElementById('btnSearch').addEventListener('click', ()=> loadProducts());
+    document.getElementById('selCategory').addEventListener('change', ()=> loadProducts());
+    document.getElementById('btnClear').addEventListener('click', ()=>{ document.getElementById('inputSearch').value=''; document.getElementById('selCategory').value='0'; loadProducts(); });
+    document.getElementById('btnProfileLink').addEventListener('click', async ()=>{
+        const user = getCurrentUser();
+        if (!user) { alert('Vui lòng đăng nhập để xem hồ sơ'); showLogin(); return; }
+        try{
+            const res = await fetch('/api/profile/' + user.userId);
+            if (!res.ok) throw new Error('Cannot load profile');
+            const data = await res.json();
+            let html = `<div class="p-3"><h5>Hồ sơ: ${escapeHtml(data.user.name)}</h5><p>Username: ${escapeHtml(data.user.username)}<br/>Email: ${escapeHtml(data.user.email)}</p><hr/><h6>Lịch sử mua hàng</h6>`;
+            if (!data.orders.length) html += '<div>Chưa có đơn hàng</div>';
+            else{
+                data.orders.forEach(o=>{
+                    html += `<div class="mb-2"><strong>Order #${o.orderId}</strong> - ${o.status} - Tổng: ${Number(o.total).toLocaleString('vi-VN')} VNĐ<ul>`;
+                    o.items.forEach(i=> html += `<li>${escapeHtml(i.name)} x${i.qty} - ${Number(i.price).toLocaleString('vi-VN')} VNĐ</li>`);
+                    html += '</ul></div>';
+                });
+            }
+            html += '</div>';
+            showModal('Hồ sơ người dùng', html);
+        }catch(e){ console.error(e); alert('Không tải được hồ sơ'); }
+    });
+
+    window.closeModal = closeModal;
+    // modal close when clicking outside
+    document.addEventListener('click', (e)=>{ const modal = document.getElementById('appModal'); if (modal.style.display=='block' && !document.getElementById('modalContent').contains(e.target) && !e.target.closest('.btn')) closeModal(); });
+
+    // load
+    updateAuthUI(); renderCartCount(); loadCategories().then(()=> loadProducts());
+
+    // --- Show placeholder / no-product messages improvements ---
+    function showNoProductsMessage(container, message){
+        container.innerHTML = `<div class="col-12 text-muted">${message}</div>`;
+    }
+    /*]]>*/
     </script>
 
 </body>

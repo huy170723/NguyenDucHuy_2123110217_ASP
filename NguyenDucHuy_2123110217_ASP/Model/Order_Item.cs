@@ -21,7 +21,7 @@ namespace NguyenDucHuy_2123110217_ASP.Model
         public decimal Price { get; set; }
 
         // Navigation
-        public Order Order { get; set; } = null!;
-        public Product_Variant ProductVariant { get; set; } = null!;
+        public Order? Order { get; set; }
+        public Product_Variant? ProductVariant { get; set; }
     }
 }

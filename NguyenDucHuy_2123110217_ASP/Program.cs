@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using NguyenDucHuy_2123110217_ASP.Data;
-using System.Text.Json.Serialization; // 1. Thêm thư viện này
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,39 +8,53 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// 2. Thêm CORS
+// 2. Cấu hình CORS (Cho phép giao diện HTML gọi API)
 builder.Services.AddCors(options => {
     options.AddPolicy("AllowAll", policy => {
         policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
     });
 });
 
-// 2. SỬA TẠI ĐÂY: Thêm IgnoreCycles để fix lỗi "object cycle"
-builder.Services.AddControllers().AddJsonOptions(x =>
-                x.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
+// 3. Fix lỗi Object Cycle (Vòng lặp JSON) and enable MVC views
+builder.Services.AddControllersWithViews().AddJsonOptions(x =>
+    x.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// 3. Cấu hình Swagger
+// 4. Cấu hình Swagger
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
+    c.RoutePrefix = "swagger"; // Để swagger ở đường dẫn /swagger cho đỡ rối
 });
 
+// 5. Cấu hình File tĩnh (Để mở index.html)
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-// Nếu chạy local bị lỗi SSL, có thể comment dòng này
+// Nếu chạy local mà lỗi failed net::ERR_CONNECTION, Huy hãy tạm comment dòng dưới (thêm //)
 app.UseHttpsRedirection();
 
-// 4. Kích hoạt CORS (Phải để TRƯỚC MapControllers)
+// 6. Kích hoạt CORS (Quan trọng: Phải nằm trước MapControllers)
 app.UseCors("AllowAll");
 
 app.UseAuthorization();
 app.MapControllers();
+
+// Map default route for MVC Views
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");
+
+// Seed data
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<NguyenDucHuy_2123110217_ASP.Data.AppDbContext>();
+    NguyenDucHuy_2123110217_ASP.Data.DbInitializer.Initialize(db);
+}
 
 app.Run();

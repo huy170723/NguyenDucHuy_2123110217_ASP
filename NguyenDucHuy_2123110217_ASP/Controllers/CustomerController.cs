@@ -68,9 +68,13 @@ namespace NguyenDucHuy_2123110217_ASP.Controllers
         [HttpPost]
         public async Task<ActionResult<Customer>> PostCustomer(Customer customer)
         {
-            // Validate phone trùng
-            if (_context.Customers.Any(c => c.Phone == customer.Phone))
-                return BadRequest("Phone number already exists.");
+            // Nếu phone đã tồn tại thì trả về customer hiện có để frontend tiếp tục
+            var existing = _context.Customers.FirstOrDefault(c => c.Phone == customer.Phone);
+            if (existing != null)
+            {
+                // Trả về 200 cùng object hiện có
+                return Ok(existing);
+            }
 
             _context.Customers.Add(customer);
             await _context.SaveChangesAsync();

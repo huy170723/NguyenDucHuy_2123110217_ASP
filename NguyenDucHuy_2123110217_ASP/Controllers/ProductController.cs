@@ -45,6 +45,41 @@ namespace NguyenDucHuy_2123110217_ASP.Controllers
             return product;
         }
 
+        // GET: api/product/category/5
+        [HttpGet("category/{categoryId}")]
+        public async Task<ActionResult<IEnumerable<Product>>> GetProductsByCategory(int categoryId)
+        {
+            // Kiểm tra category tồn tại
+            if (!_context.Categories.Any(c => c.CategoryId == categoryId))
+                return NotFound($"Category with id {categoryId} not found.");
+
+            var products = await _context.Products
+                                         .Where(p => p.CategoryId == categoryId)
+                                         .Include(p => p.Category)
+                                         .Include(p => p.ProductVariants)
+                                         .ToListAsync();
+
+            return products;
+        }
+
+        // GET: api/product/search?q=iphone
+        [HttpGet("search")]
+        public async Task<ActionResult<IEnumerable<Product>>> SearchProducts([FromQuery(Name = "q")] string q)
+        {
+            if (string.IsNullOrWhiteSpace(q))
+                return BadRequest("Query parameter 'q' is required.");
+
+            // Sử dụng EF.Functions.Like để tìm tên chứa chuỗi (case-insensitive tuỳ DB collation)
+            var pattern = $"%{q}%";
+            var results = await _context.Products
+                                        .Where(p => EF.Functions.Like(p.Name, pattern))
+                                        .Include(p => p.Category)
+                                        .Include(p => p.ProductVariants)
+                                        .ToListAsync();
+
+            return results;
+        }
+
         // POST: api/product
         [HttpPost]
         public async Task<ActionResult<Product>> PostProduct(Product product)
@@ -104,7 +139,7 @@ namespace NguyenDucHuy_2123110217_ASP.Controllers
                 return NotFound();
 
             // Không xóa nếu còn variant liên quan
-            if (product.ProductVariants.Any())
+            if (product.ProductVariants?.Any() ?? false)
                 return BadRequest("Cannot delete product with variants.");
 
             _context.Products.Remove(product);

@@ -31,6 +31,10 @@ namespace NguyenDucHuy_2123110217_ASP.Model
         // Navigation
         public Category Category { get; set; }
 
+        // URL ảnh hiển thị sản phẩm (tuỳ chọn)
+        [MaxLength(500)]
+        public string? ImageUrl { get; set; }
+
         // ⚡ Quan trọng: đặt trùng với DbContext
         public ICollection<Product_Variant>? ProductVariants { get; set; }
     }

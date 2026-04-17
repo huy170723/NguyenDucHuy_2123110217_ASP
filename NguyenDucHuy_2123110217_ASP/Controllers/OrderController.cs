@@ -101,16 +101,74 @@ namespace NguyenDucHuy_2123110217_ASP.Controllers
             return order;
         }
 
+        // GET: api/order/user/5
+        [HttpGet("user/{userId}")]
+        public async Task<ActionResult<IEnumerable<OrderDto>>> GetOrdersByUser(int userId)
+        {
+            var orders = await _context.Orders
+                .Where(o => o.UserId == userId)
+                .Include(o => o.Customer)
+                .Include(o => o.User)
+                .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.ProductVariant)
+                        .ThenInclude(pv => pv.Product)
+                .Select(o => new OrderDto
+                {
+                    OrderId = o.OrderId,
+                    CustomerName = o.Customer != null ? o.Customer.Name : string.Empty,
+                    UserName = o.User != null ? o.User.Name : string.Empty,
+                    TotalAmount = o.TotalAmount,
+                    FinalAmount = o.FinalAmount,
+                    Items = o.OrderItems.Select(oi => new OrderItemDto
+                    {
+                        OrderItemId = oi.OrderItemId,
+                        ProductName = oi.ProductVariant != null && oi.ProductVariant.Product != null ? oi.ProductVariant.Product.Name : string.Empty,
+                        VariantSKU = oi.ProductVariant != null ? oi.ProductVariant.SKU : string.Empty,
+                        Quantity = oi.Quantity,
+                        Price = oi.Price
+                    }).ToList()
+                }).ToListAsync();
+
+            return orders;
+        }
+
         // POST: api/order
         [HttpPost]
-        public async Task<ActionResult<Order>> PostOrder(Order order)
+        public async Task<ActionResult<Order>> PostOrder([FromBody] OrderCreateDto dto)
         {
-            if (order.OrderItems == null || !order.OrderItems.Any())
+            if (dto == null || dto.OrderItems == null || !dto.OrderItems.Any())
                 return BadRequest("Order must have at least one item.");
 
-            // Tính TotalAmount
+            // Validate customer and user exist
+            if (!_context.Customers.Any(c => c.CustomerId == dto.CustomerId))
+                return BadRequest("The Customer field is required.");
+            if (!_context.Users.Any(u => u.UserId == dto.UserId))
+                return BadRequest("The User field is required.");
+
+            // Validate each order item
+            foreach (var it in dto.OrderItems)
+            {
+                if (!_context.ProductVariants.Any(v => v.VariantId == it.VariantId))
+                    return BadRequest("The ProductVariant field is required.");
+            }
+
+            // Build Order entity
+            var order = new Order
+            {
+                CustomerId = dto.CustomerId,
+                UserId = dto.UserId,
+                Status = dto.Status ?? "Pending",
+                OrderItems = dto.OrderItems.Select(i => new Order_Item
+                {
+                    VariantId = i.VariantId,
+                    Quantity = i.Quantity,
+                    Price = i.Price
+                }).ToList()
+            };
+
+            // Calculate totals
             order.TotalAmount = order.OrderItems.Sum(oi => oi.Price * oi.Quantity);
-            order.FinalAmount = order.TotalAmount; // Chưa áp dụng discount, coupon...
+            order.FinalAmount = order.TotalAmount;
 
             _context.Orders.Add(order);
             await _context.SaveChangesAsync();

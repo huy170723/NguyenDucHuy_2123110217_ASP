@@ -26,10 +26,10 @@ namespace NguyenDucHuy_2123110217_ASP.Model
         public string Status { get; set; } = null!;
 
         // Navigation
-        public Customer Customer { get; set; } = null!;
-        public User User { get; set; } = null!;
+        public Customer? Customer { get; set; }
+        public User? User { get; set; }
 
-        public ICollection<Order_Item> OrderItems { get; set; } = new List<Order_Item>();
-        public ICollection<Payment> Payments { get; set; } = new List<Payment>();
+        public ICollection<Order_Item>? OrderItems { get; set; }
+        public ICollection<Payment>? Payments { get; set; }
     }
 }

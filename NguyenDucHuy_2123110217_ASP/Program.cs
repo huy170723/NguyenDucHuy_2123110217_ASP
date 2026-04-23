@@ -22,6 +22,20 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+// 4. Cấu hình Swagger
+if (app.Environment.IsDevelopment() || true) // Cho phép chạy Swagger cả khi deploy (nếu muốn)
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
+        c.RoutePrefix = "swagger";
+    });
+}
+
+// 5. Cấu hình File tĩnh (Để mở index.html)
+    c.RoutePrefix = "swagger"; // Để swagger ở đường dẫn /swagger cho đỡ rối
+});
 // 2. Bật Swagger để test API trên web
 app.UseSwagger();
 app.UseSwaggerUI(c => {

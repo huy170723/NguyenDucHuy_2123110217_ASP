@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Kết nối Postgres từ Render (Lấy từ Environment Variables)
+// Kết nối Postgres từ Render
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -22,21 +22,6 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// 4. Cấu hình Swagger
-if (app.Environment.IsDevelopment() || true) // Cho phép chạy Swagger cả khi deploy (nếu muốn)
-{
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
-        c.RoutePrefix = "swagger";
-    });
-}
-
-// 5. Cấu hình File tĩnh (Để mở index.html)
-    c.RoutePrefix = "swagger"; // Để swagger ở đường dẫn /swagger cho đỡ rối
-});
-// 2. Bật Swagger để test API trên web
 app.UseSwagger();
 app.UseSwaggerUI(c => {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
@@ -50,11 +35,11 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
 
-// 3. Tự động tạo bảng dữ liệu khi chạy
+// Tự tạo bảng dữ liệu trên Database mới
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.EnsureCreated(); // Lệnh này giúp tạo bảng tự động trên Postgres
+    db.Database.EnsureCreated();
 }
 
 app.Run();

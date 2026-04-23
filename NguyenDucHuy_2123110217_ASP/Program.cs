@@ -4,9 +4,11 @@ using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Kết nối Postgres từ Render
+// Lấy chuỗi kết nối từ biến môi trường (Render) hoặc file cấu hình (Local)
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(connectionString)); // Sử dụng PostgreSQL cho Render
 
 builder.Services.AddCors(options => {
     options.AddPolicy("AllowAll", policy => {
@@ -22,6 +24,7 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+// Cấu hình Swagger để test API và nạp dữ liệu
 app.UseSwagger();
 app.UseSwaggerUI(c => {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
@@ -35,11 +38,19 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
 
-// Tự tạo bảng dữ liệu trên Database mới
+// TỰ ĐỘNG TẠO BẢNG KHI WEB KHỞI CHẠY
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.EnsureCreated();
+    try
+    {
+        db.Database.EnsureCreated();
+        Console.WriteLine("Database & Tables created successfully!");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error creating database: {ex.Message}");
+    }
 }
 
 app.Run();

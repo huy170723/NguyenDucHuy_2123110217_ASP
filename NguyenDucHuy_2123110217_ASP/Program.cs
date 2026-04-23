@@ -15,6 +15,9 @@ builder.Services.AddCors(options => {
     });
 });
 
+// 3. Fix lỗi Object Cycle (Vòng lặp JSON)
+builder.Services.AddControllers().AddJsonOptions(x =>
+    x.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
 // 3. Fix lỗi Object Cycle (Vòng lặp JSON) and enable MVC views
 builder.Services.AddControllersWithViews().AddJsonOptions(x =>
     x.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
@@ -29,6 +32,10 @@ app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
+    c.RoutePrefix = "swagger"; // Để swagger ở đường dẫn /swagger cho đỡ rối
+});
+
+// 5. Cấu hình File tĩnh (Để mở index.html)
     c.RoutePrefix = "swagger"; // Để swagger ở đường dẫn /swagger cho đỡ rối
 });
 
